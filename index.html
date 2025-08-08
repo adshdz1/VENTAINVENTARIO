@@ -123,79 +123,81 @@
             <div id="billing" class="tab-content">
                 <div class="content-header">
                     <h1>Facturación</h1>
-                    <button class="btn btn-primary" onclick="createNewOrder()">
-                        <i class="fas fa-plus"></i> Nueva Orden
+                    <button class="btn btn-primary" onclick="showMainMenu()" id="main-menu-btn" style="display: none;">
+                        <i class="fas fa-home"></i> Menú Principal
                     </button>
                 </div>
                 
-                <div class="billing-container">
-                    <div class="menu-section">
-                        <h3>Menú del Restaurante</h3>
-                        <div class="category-buttons" id="category-tabs">
-                            <!-- Categories will be loaded here -->
-                        </div>
-                        <div class="products-grid" id="products-grid">
-                            <!-- Products will be loaded here -->
-                        </div>
-                    </div>
-                    
-                                    <div class="order-section">
-                    <div class="order-header">
-                        <h3>Orden Actual</h3>
-                        <button class="btn btn-secondary" onclick="clearOrder()">
-                            <i class="fas fa-trash"></i> Limpiar
+                <!-- Main Menu View -->
+                <div id="main-menu-view" class="main-menu-container">
+                    <div class="location-type-selector">
+                        <button class="location-type-btn active" onclick="switchLocationType('mesa')">
+                            <i class="fas fa-chair"></i> Mesas
+                        </button>
+                        <button class="location-type-btn" onclick="switchLocationType('domicilio')">
+                            <i class="fas fa-motorcycle"></i> Domicilio
+                        </button>
+                        <button class="location-type-btn" onclick="switchLocationType('barra')">
+                            <i class="fas fa-glass-martini"></i> Barra
+                        </button>
+                        <button class="btn btn-danger" onclick="clearAllOrders()" style="margin-left: 20px;">
+                            <i class="fas fa-trash"></i> Limpiar Todas las Órdenes
+                        </button>
+                        <button class="btn btn-info" onclick="testFunction()" style="margin-left: 10px;">
+                            <i class="fas fa-bug"></i> Test
                         </button>
                     </div>
-                    
-                    <!-- Selección de ubicación -->
-                    <div class="location-selector">
-                        <h4>Ubicación</h4>
-                        <div class="location-tabs">
-                            <button class="location-tab active" data-type="mesa" onclick="switchLocationType('mesa')">
-                                <i class="fas fa-chair"></i> Mesas
-                            </button>
-                            <button class="location-tab" data-type="domicilio" onclick="switchLocationType('domicilio')">
-                                <i class="fas fa-motorcycle"></i> Domicilio
-                            </button>
-                            <button class="location-tab" data-type="barra" onclick="switchLocationType('barra')">
-                                <i class="fas fa-glass-martini"></i> Barra
-                            </button>
+                    <h2>Seleccionar Mesa</h2>
+                    <div class="tables-grid" id="tables-grid">
+                        <!-- Tables will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- Order View -->
+                <div id="order-view" class="billing-container" style="display: none;">
+                    <!-- Menu Section -->
+                    <div class="menu-section">
+                        <div class="category-buttons" id="category-tabs">
+                            <!-- Category tabs will be loaded here -->
                         </div>
                         
-                        <div class="location-options" id="location-options">
-                            <!-- Las opciones se cargarán dinámicamente -->
-                        </div>
-                        
-                        <div class="selected-location" id="selected-location">
-                            <span>Ubicación: <strong id="current-location">Sin seleccionar</strong></span>
+                        <div class="products-grid" id="products-grid">
+                            <!-- Products will be displayed here -->
                         </div>
                     </div>
+                    
+                    <!-- Order Section -->
+                    <div class="order-section">
+                        <div class="order-header">
+                            <h3>Orden para: <span id="current-table-display">Sin seleccionar</span></h3>
+                        </div>
                         
                         <div class="order-items" id="order-items">
                             <!-- Order items will be displayed here -->
                         </div>
                         
                         <div class="order-summary">
-                            <div class="summary-row">
-                                <span>Subtotal:</span>
-                                <span id="subtotal">$0.00</span>
-                            </div>
-                            <div class="summary-row">
-                                <span>IVA (16%):</span>
-                                <span id="tax">$0.00</span>
-                            </div>
                             <div class="summary-row total">
-                                <span>Total:</span>
+                                <span>TOTAL:</span>
                                 <span id="total">$0.00</span>
                             </div>
                         </div>
                         
                         <div class="order-actions">
-                            <button class="btn btn-success" onclick="completeOrder()">
-                                <i class="fas fa-check"></i> Completar Orden
+                            <button class="btn btn-warning" onclick="printKitchenTicket()">
+                                <i class="fas fa-utensils"></i> Imprimir para Cocina
+                            </button>
+                            <button class="btn btn-success" onclick="saveOrder()">
+                                <i class="fas fa-save"></i> Guardar Orden
+                            </button>
+                            <button class="btn btn-primary" onclick="payOrder()">
+                                <i class="fas fa-credit-card"></i> Pagar Orden
                             </button>
                             <button class="btn btn-info" onclick="printReceipt()">
-                                <i class="fas fa-print"></i> Imprimir
+                                <i class="fas fa-print"></i> Recibo Cliente
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearOrder()" id="clear-order-btn">
+                                <i class="fas fa-trash"></i> Limpiar Orden
                             </button>
                         </div>
                     </div>

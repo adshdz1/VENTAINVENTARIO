@@ -18,7 +18,7 @@ function createWindow() {
       enableRemoteModule: true
     },
     icon: path.join(__dirname, 'assets/icon.png'),
-    title: 'Restaurant Billing & Inventory System'
+    title: 'Rocoto Burguer'
   });
 
   // Start with login page
@@ -96,6 +96,11 @@ ipcMain.handle('save-order', (event, order) => {
   return order;
 });
 
+ipcMain.handle('clear-all-orders', () => {
+  store.set('orders', []);
+  return { success: true, message: 'Todas las órdenes han sido eliminadas' };
+});
+
 ipcMain.handle('update-order-status', (event, orderId, status) => {
   const orders = store.get('orders', []);
   const order = orders.find(o => o.id === orderId);
@@ -107,19 +112,60 @@ ipcMain.handle('update-order-status', (event, orderId, status) => {
   return order;
 });
 
+// Database management
+ipcMain.handle('load-database', () => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const dbPath = path.join(__dirname, 'database.json');
+    
+    if (fs.existsSync(dbPath)) {
+      const data = fs.readFileSync(dbPath, 'utf8');
+      const database = JSON.parse(data);
+      
+      // Store categories and products in electron-store
+      store.set('categories', database.categories);
+      store.set('products', database.products);
+      store.set('settings', database.settings);
+      
+      return { success: true, message: 'Database loaded successfully' };
+    } else {
+      return { success: false, message: 'Database file not found' };
+    }
+  } catch (error) {
+    console.error('Error loading database:', error);
+    return { success: false, message: 'Error loading database' };
+  }
+});
+
 // Categories
 ipcMain.handle('get-categories', () => {
   return store.get('categories', [
-    { id: '1', name: 'Hamburguesas', color: '#FF6B6B' },
-    { id: '2', name: 'Sandwiches', color: '#4ECDC4' },
-    { id: '3', name: 'Hot Dogs', color: '#45B7D1' },
-    { id: '4', name: 'Ensaladas', color: '#96CEB4' },
-    { id: '5', name: 'Carnes', color: '#FFA500' },
-    { id: '6', name: 'Bebidas', color: '#3498DB' },
-    { id: '7', name: 'Adicionales', color: '#9B59B6' },
-    { id: '8', name: 'Mazorcadas', color: '#E67E22' },
-    { id: '9', name: 'Toppings', color: '#E74C3C' }
+    { id: '1', name: 'Hamburguesas', color: '#FF6B6B', icon: 'fas fa-hamburger' },
+    { id: '2', name: 'Sandwiches', color: '#4ECDC4', icon: 'fas fa-bread-slice' },
+    { id: '3', name: 'Hot Dogs', color: '#45B7D1', icon: 'fas fa-hotdog' },
+    { id: '4', name: 'Ensaladas', color: '#96CEB4', icon: 'fas fa-leaf' },
+    { id: '5', name: 'Carnes', color: '#FFA500', icon: 'fas fa-drumstick-bite' },
+    { id: '6', name: 'Bebidas', color: '#3498DB', icon: 'fas fa-wine-bottle' },
+    { id: '7', name: 'Adicionales', color: '#9B59B6', icon: 'fas fa-plus-circle' },
+    { id: '8', name: 'Mazorcadas', color: '#E67E22', icon: 'fas fa-seedling' },
+    { id: '9', name: 'Toppings', color: '#E74C3C', icon: 'fas fa-star' }
   ]);
+});
+
+// Get products by category
+ipcMain.handle('get-products-by-category', (event, categoryId) => {
+  const products = store.get('products', {});
+  
+  if (categoryId === '1') {
+    // Hamburguesas
+    return products.hamburguesas || [];
+  } else if (categoryId === '7') {
+    // Adicionales
+    return products.adicionales || [];
+  }
+  
+  return [];
 });
 
 // Reports

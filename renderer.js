@@ -8,7 +8,11 @@ let currentOrder = {
     tax: 0,
     total: 0,
     location: null,
-    locationType: null
+    locationType: null,
+    locationDisplay: null,
+    isKitchenTicketPrinted: false,
+    isPaid: false,
+    orderId: null
 };
 
 let currentLocationType = 'mesa';
@@ -23,12 +27,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check authentication first
     await checkAuthentication();
     
+    // Load database first
+    await loadDatabase();
+    
     await loadData();
     setupEventListeners();
     updateDashboard();
     loadCategories();
     loadProducts();
-    loadOrders();
+    
+    console.log('Data loaded - Products:', products.length, 'Categories:', categories.length, 'Orders:', orders.length);
     
     // Check if this is the first time running (no products)
     if (products.length === 0) {
@@ -39,14 +47,43 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateDashboard();
                 loadCategories();
                 loadProducts();
-                loadOrders();
                 loadInventoryTable();
             }
         } else {
             alert('No hay productos en el inventario. Contacta al administrador para agregar productos.');
         }
     }
+    
+    // Show main menu by default after data is loaded
+    setTimeout(() => {
+        console.log('Initializing main menu...');
+        showMainMenu();
+    }, 500);
 });
+
+// Load database function
+async function loadDatabase() {
+    try {
+        const result = await ipcRenderer.invoke('load-database');
+        if (result.success) {
+            console.log('Database loaded successfully');
+        } else {
+            console.log('Database load result:', result.message);
+        }
+    } catch (error) {
+        console.error('Error loading database:', error);
+    }
+}
+
+// Format price in Colombian pesos
+function formatPrice(price) {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(price);
+}
 
 // Authentication functions
 async function checkAuthentication() {
@@ -212,6 +249,7 @@ function switchTab(tabName) {
             loadCategories();
             loadProducts();
             loadLocationOptions(currentLocationType);
+            showMainMenu(); // Show main menu when billing tab is selected
             break;
         case 'inventory':
             // Check admin permissions for inventory
@@ -375,6 +413,11 @@ function loadLocationOptions(type) {
                  onclick="selectLocation('${locationId}', '${displayName}')" 
                  title="${displayName}">
                 ${displayName}
+                ${isOccupied ? 
+                    `<button class="unlock-btn" onclick="event.stopPropagation(); unlockLocation('${locationId}')" title="Desbloquear">
+                        <i class="fas fa-unlock"></i>
+                    </button>` : ''
+                }
             </div>
         `);
     }
@@ -395,6 +438,9 @@ function selectLocation(locationId, displayName) {
     
     updateLocationDisplay();
     loadLocationOptions(currentLocationType); // Refresh to show selection
+    
+    // Hide location selector after selection
+    hideLocationSelector();
 }
 
 function updateLocationDisplay() {
@@ -416,10 +462,389 @@ function markLocationAsFree(locationId) {
     occupiedLocations.delete(locationId);
 }
 
+// Hide location selector to give more space for products
+function hideLocationSelector() {
+    const locationSelector = document.querySelector('.location-selector');
+    if (locationSelector) {
+        locationSelector.style.display = 'none';
+    }
+    
+    // Add a button to show location selector again
+    addShowLocationButton();
+}
+
+// Show location selector again
+function showLocationSelector() {
+    const locationSelector = document.querySelector('.location-selector');
+    if (locationSelector) {
+        locationSelector.style.display = 'block';
+    }
+    
+    // Remove the show location button
+    removeShowLocationButton();
+}
+
+// Add button to show location selector
+function addShowLocationButton() {
+    const billingContent = document.querySelector('#billing-content');
+    if (billingContent && !document.getElementById('show-location-btn')) {
+        const showLocationBtn = document.createElement('button');
+        showLocationBtn.id = 'show-location-btn';
+        showLocationBtn.className = 'show-location-btn';
+        showLocationBtn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Cambiar Ubicación';
+        showLocationBtn.onclick = showLocationSelector;
+        
+        // Insert at the beginning of billing content
+        billingContent.insertBefore(showLocationBtn, billingContent.firstChild);
+    }
+}
+
+// Remove show location button
+function removeShowLocationButton() {
+    const showLocationBtn = document.getElementById('show-location-btn');
+    if (showLocationBtn) {
+        showLocationBtn.remove();
+    }
+}
+
+// Function to unlock occupied locations
+function unlockLocation(locationId) {
+    markLocationAsFree(locationId);
+    loadLocationOptions(currentLocationType);
+    alert(`Ubicación ${locationId} ha sido desbloqueada.`);
+}
+
+// Function to unlock all locations
+function unlockAllLocations() {
+    occupiedLocations.clear();
+    loadLocationOptions(currentLocationType);
+    alert('Todas las ubicaciones han sido desbloqueadas.');
+}
+
+async function clearAllOrders() {
+    try {
+        const result = await ipcRenderer.invoke('clear-all-orders');
+        if (result.success) {
+            // Reload data
+            await loadData();
+            // Clear occupied locations
+            occupiedLocations.clear();
+            // Reload tables grid
+            loadTablesGrid();
+            alert('Todas las órdenes han sido eliminadas. Las mesas están ahora libres.');
+        }
+    } catch (error) {
+        console.error('Error clearing orders:', error);
+        alert('Error al limpiar las órdenes: ' + error.message);
+    }
+}
+
+function testFunction() {
+    alert('Función de prueba funcionando!');
+    console.log('Test function called');
+    console.log('Orders:', orders);
+    console.log('Products:', products);
+    console.log('Categories:', categories);
+}
+
+// Main menu functions
+function showMainMenu() {
+    console.log('Showing main menu...');
+    const mainMenuView = document.getElementById('main-menu-view');
+    const orderView = document.getElementById('order-view');
+    const mainMenuBtn = document.getElementById('main-menu-btn');
+    
+    if (mainMenuView) mainMenuView.style.display = 'block';
+    if (orderView) orderView.style.display = 'none';
+    if (mainMenuBtn) mainMenuBtn.style.display = 'none';
+    
+    loadTablesGrid();
+}
+
+function switchLocationType(locationType) {
+    console.log('Switching to location type:', locationType);
+    
+    // Update active button
+    document.querySelectorAll('.location-type-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Update URL parameter
+    const url = new URL(window.location);
+    url.searchParams.set('type', locationType);
+    window.history.replaceState({}, '', url);
+    
+    // Reload tables grid with new type
+    loadTablesGrid();
+}
+
+function showOrderView() {
+    console.log('=== SHOWING ORDER VIEW ===');
+    
+    const mainMenuView = document.getElementById('main-menu-view');
+    const orderView = document.getElementById('order-view');
+    const mainMenuBtn = document.getElementById('main-menu-btn');
+    
+    console.log('Main menu view element:', mainMenuView);
+    console.log('Order view element:', orderView);
+    console.log('Main menu btn element:', mainMenuBtn);
+    
+    if (mainMenuView) {
+        mainMenuView.style.display = 'none';
+        console.log('Main menu view hidden');
+    } else {
+        console.error('Main menu view element not found');
+    }
+    
+    if (orderView) {
+        orderView.style.display = 'grid';
+        console.log('Order view shown');
+        
+        // Force a small delay to ensure the view is visible before loading categories
+        setTimeout(() => {
+            console.log('Loading categories after view is shown...');
+            loadCategories();
+            loadProducts();
+        }, 100);
+    } else {
+        console.error('Order view element not found');
+    }
+    
+    if (mainMenuBtn) {
+        mainMenuBtn.style.display = 'block';
+        console.log('Main menu button shown');
+    } else {
+        console.error('Main menu button element not found');
+    }
+    
+    console.log('=== ORDER VIEW SHOWN ===');
+}
+
+function loadTablesGrid() {
+    console.log('Loading tables grid...');
+    const tablesGrid = document.getElementById('tables-grid');
+    if (!tablesGrid) {
+        console.error('Tables grid element not found');
+        return;
+    }
+
+    console.log('Orders:', orders);
+    console.log('Occupied locations:', occupiedLocations);
+
+    // Get current location type from URL or default to 'mesa'
+    const urlParams = new URLSearchParams(window.location.search);
+    const locationType = urlParams.get('type') || 'mesa';
+    
+    // Update the title based on location type
+    const titleElement = document.querySelector('#main-menu-view h2');
+    if (titleElement) {
+        const titles = {
+            'mesa': 'Seleccionar Mesa',
+            'domicilio': 'Seleccionar Domicilio',
+            'barra': 'Seleccionar Barra'
+        };
+        titleElement.textContent = titles[locationType] || 'Seleccionar Mesa';
+    }
+
+    const tables = [];
+    for (let i = 1; i <= 14; i++) {
+        const locationId = `${locationType}_${i}`;
+        const isOccupied = occupiedLocations.has(locationId);
+        const existingOrder = orders.find(o => o.location === locationId && o.status !== 'completed');
+        
+        const displayNames = {
+            'mesa': `Mesa ${i}`,
+            'domicilio': `Domicilio ${i}`,
+            'barra': `Barra ${i}`
+        };
+        
+            tables.push(`
+        <div class="table-card ${isOccupied ? 'occupied' : 'free'}" onclick="selectTable('${locationId}', '${displayNames[locationType]}')" style="cursor: pointer;">
+            <div class="table-number">${i}</div>
+            <div class="table-status ${isOccupied ? 'occupied' : 'free'}">
+                ${isOccupied ? 'Ocupada' : 'Libre'}
+            </div>
+            ${existingOrder ? `<div class="table-info">Orden activa</div>` : ''}
+            <div style="font-size: 10px; color: #666; margin-top: 5px;">Click para seleccionar</div>
+        </div>
+    `);
+    }
+
+    tablesGrid.innerHTML = tables.join('');
+    console.log('Tables grid loaded with', tables.length, 'tables for type:', locationType);
+}
+
+function selectTable(locationId, locationName) {
+    console.log('=== SELECTING LOCATION ===');
+    console.log('Location ID:', locationId);
+    console.log('Location Name:', locationName);
+    
+    // Check if orders is available
+    if (!orders || !Array.isArray(orders)) {
+        console.error('Orders not available:', orders);
+        alert('Error: No se pueden cargar las órdenes. Intenta recargar la aplicación.');
+        return;
+    }
+    
+    // Check if location has existing order
+    const existingOrder = orders.find(o => o.location === locationId && o.status !== 'completed');
+    console.log('Existing order found:', existingOrder);
+    
+    if (existingOrder) {
+        console.log('Loading existing order:', existingOrder.id);
+        // Load existing order
+        loadExistingOrder(existingOrder.id);
+    } else {
+        console.log('Creating new order for location:', locationId);
+        // Determine location type from locationId
+        const locationType = locationId.split('_')[0]; // mesa, domicilio, or barra
+        
+        // Create new order for this location
+        currentOrder = {
+            items: [],
+            subtotal: 0,
+            tax: 0,
+            total: 0,
+            location: locationId,
+            locationType: locationType,
+            locationDisplay: locationName,
+            isKitchenTicketPrinted: false,
+            isPaid: false,
+            orderId: null
+        };
+        
+        console.log('New currentOrder created:', currentOrder);
+        
+        // Mark location as occupied
+        markLocationAsOccupied(locationId);
+        console.log('Location marked as occupied:', locationId);
+    }
+    
+    // Update display
+    const displayElement = document.getElementById('current-table-display');
+    if (displayElement) {
+        displayElement.textContent = locationName;
+        console.log('Updated display with:', locationName);
+    } else {
+        console.error('current-table-display element not found');
+    }
+    
+    // Load categories and products for the order view
+    console.log('Loading categories and products...');
+    loadCategories();
+    loadProducts();
+    
+    console.log('Calling updateOrderDisplay()');
+    updateOrderDisplay();
+    
+    console.log('Calling showOrderView()');
+    showOrderView();
+    
+    console.log('=== LOCATION SELECTION COMPLETE ===');
+}
+
+async function saveOrder() {
+    if (currentOrder.items.length === 0) {
+        alert('Agrega productos a la orden antes de guardarla.');
+        return;
+    }
+
+    const order = {
+        ...currentOrder,
+        status: 'pending',
+        createdAt: moment().format('YYYY-MM-DD HH:mm:ss')
+    };
+
+    try {
+        const savedOrder = await ipcRenderer.invoke('save-order', order);
+        
+        // Update current order with saved ID
+        currentOrder.orderId = savedOrder.id;
+        
+        // Reload data
+        await loadData();
+        updateDashboard();
+        
+        alert(`Orden guardada exitosamente para ${currentOrder.locationDisplay}!`);
+    } catch (error) {
+        console.error('Error saving order:', error);
+        alert('Error al guardar la orden.');
+    }
+}
+
+// Function to load existing order
+async function loadExistingOrder(orderId) {
+    try {
+        console.log('Loading existing order with ID:', orderId);
+        console.log('Available orders:', orders);
+        
+        const order = orders.find(o => o.id === orderId || o._id === orderId);
+        if (!order) {
+            console.error('Order not found with ID:', orderId);
+            alert('Orden no encontrada.');
+            return;
+        }
+
+        console.log('Found order:', order);
+
+        // Check if order is already paid
+        if (order.status === 'completed') {
+            alert('Esta orden ya fue pagada y no se puede modificar.');
+            return;
+        }
+
+        // Load order into current order
+        currentOrder = {
+            ...order,
+            isKitchenTicketPrinted: order.isKitchenTicketPrinted || false,
+            isPaid: order.isPaid || false,
+            orderId: order.id || order._id
+        };
+
+        console.log('Current order loaded:', currentOrder);
+
+        // Update display
+        updateOrderDisplay();
+        document.getElementById('current-table-display').textContent = currentOrder.locationDisplay;
+        
+        // Update button states
+        const clearBtn = document.getElementById('clear-order-btn');
+        if (clearBtn) {
+            if (currentOrder.isKitchenTicketPrinted) {
+                clearBtn.disabled = true;
+                clearBtn.style.opacity = '0.5';
+                clearBtn.title = 'No se puede limpiar la orden después de imprimir ticket de cocina';
+            } else {
+                clearBtn.disabled = false;
+                clearBtn.style.opacity = '1';
+                clearBtn.title = '';
+            }
+        }
+
+        // Show order view
+        showOrderView();
+        
+        alert(`Orden cargada: ${currentOrder.locationDisplay}`);
+    } catch (error) {
+        console.error('Error loading order:', error);
+        alert('Error al cargar la orden: ' + error.message);
+    }
+}
+
 // Billing functions
 function loadCategories() {
+    console.log('=== LOADING CATEGORIES ===');
     const categoryTabs = document.getElementById('category-tabs');
-    if (!categoryTabs) return;
+    console.log('Category tabs element:', categoryTabs);
+    
+    if (!categoryTabs) {
+        console.error('Category tabs element not found');
+        return;
+    }
+
+    console.log('Categories available:', categories);
+    console.log('Categories length:', categories ? categories.length : 'categories is undefined');
 
     // Define icons for each category
     const categoryIcons = {
@@ -434,47 +859,88 @@ function loadCategories() {
         '9': 'fas fa-star' // Toppings
     };
 
-    categoryTabs.innerHTML = categories.map(category => `
+    const categoryHTML = categories.map(category => `
         <button class="category-tab" data-category="${category.id}" onclick="filterByCategory('${category.id}')">
             <i class="${categoryIcons[category.id] || 'fas fa-utensils'}"></i>
             ${category.name}
         </button>
     `).join('');
 
+    console.log('Category HTML generated:', categoryHTML);
+    categoryTabs.innerHTML = categoryHTML;
+
     // Set first category as active
     if (categories.length > 0) {
+        console.log('Setting first category as active:', categories[0].id);
         filterByCategory(categories[0].id);
+    } else {
+        console.warn('No categories available');
     }
+    
+    console.log('=== CATEGORIES LOADED ===');
 }
 
-function filterByCategory(categoryId) {
+async function filterByCategory(categoryId) {
     // Update active category tab
     document.querySelectorAll('.category-tab').forEach(tab => {
         tab.classList.remove('active');
     });
     document.querySelector(`[data-category="${categoryId}"]`).classList.add('active');
 
-    // Filter products
-    const categoryProducts = products.filter(product => product.categoryId === categoryId);
-    displayProducts(categoryProducts);
+    // Get products from database
+    try {
+        const categoryProducts = await ipcRenderer.invoke('get-products-by-category', categoryId);
+        displayProducts(categoryProducts);
+    } catch (error) {
+        console.error('Error loading products for category:', error);
+        // Fallback to old method
+        const categoryProducts = products.filter(product => product.categoryId === categoryId);
+        displayProducts(categoryProducts);
+    }
 }
 
 function displayProducts(productsToShow) {
     const productsGrid = document.getElementById('products-grid');
     if (!productsGrid) return;
 
-    productsGrid.innerHTML = productsToShow.map(product => `
-        <div class="product-card" onclick="addToOrder('${product.id}')">
-            <h4>${product.name}</h4>
-            <div class="price">$${product.price.toFixed(2)}</div>
-            <div class="stock">Stock: ${product.stock}</div>
-            ${product.description ? `<div class="description">${product.description}</div>` : ''}
-        </div>
-    `).join('');
+    // For hamburguesas, show in a more compact format
+    if (productsToShow.length > 0 && productsToShow[0].categoryId === '1') {
+        productsGrid.innerHTML = productsToShow.map(product => `
+            <div class="product-card" onclick="addToOrder('${product.id}')">
+                <div class="product-header">
+                    <h4>${product.name}</h4>
+                    <div class="price">${formatPrice(product.price)}</div>
+                </div>
+                ${product.description ? `<div class="description">${product.description}</div>` : ''}
+                <div class="stock">Stock: ${product.stock}</div>
+            </div>
+        `).join('');
+    } else {
+        // Default format for other categories
+        productsGrid.innerHTML = productsToShow.map(product => `
+            <div class="product-card" onclick="addToOrder('${product.id}')">
+                <h4>${product.name}</h4>
+                <div class="price">${formatPrice(product.price)}</div>
+                <div class="stock">Stock: ${product.stock}</div>
+                ${product.description ? `<div class="description">${product.description}</div>` : ''}
+            </div>
+        `).join('');
+    }
 }
 
-function addToOrder(productId) {
-    const product = products.find(p => p.id === productId);
+async function addToOrder(productId) {
+    // Get product from database
+    let product;
+    try {
+        const hamburguesas = await ipcRenderer.invoke('get-products-by-category', '1');
+        const adicionales = await ipcRenderer.invoke('get-products-by-category', '7');
+        const allProducts = [...hamburguesas, ...adicionales];
+        product = allProducts.find(p => p.id === productId);
+    } catch (error) {
+        // Fallback to old method
+        product = products.find(p => p.id === productId);
+    }
+    
     if (!product || product.stock <= 0) return;
 
     const existingItem = currentOrder.items.find(item => item.productId === productId);
@@ -488,7 +954,9 @@ function addToOrder(productId) {
             name: product.name,
             price: product.price,
             quantity: 1,
-            subtotal: product.price
+            subtotal: product.price,
+            isModifier: product.isModifier || false,
+            modifierType: product.modifierType || null
         });
     }
 
@@ -503,7 +971,7 @@ function updateOrderDisplay() {
         <div class="order-item">
             <div class="item-info">
                 <div class="item-name">${item.name}</div>
-                <div class="item-price">$${item.price.toFixed(2)}</div>
+                <div class="item-price">${formatPrice(item.price)}</div>
             </div>
             <div class="item-quantity">
                 <button class="quantity-btn" onclick="updateQuantity('${item.productId}', -1)">-</button>
@@ -520,6 +988,12 @@ function updateQuantity(productId, change) {
     const item = currentOrder.items.find(item => item.productId === productId);
     if (!item) return;
 
+    // Check if kitchen ticket was printed and trying to remove items
+    if (currentOrder.isKitchenTicketPrinted && change < 0) {
+        alert('No se pueden eliminar productos después de imprimir el ticket de cocina. Solo se pueden agregar más productos.');
+        return;
+    }
+
     item.quantity += change;
     
     if (item.quantity <= 0) {
@@ -533,12 +1007,12 @@ function updateQuantity(productId, change) {
 
 function calculateTotals() {
     currentOrder.subtotal = currentOrder.items.reduce((sum, item) => sum + item.subtotal, 0);
-    currentOrder.tax = currentOrder.subtotal * 0.16; // 16% IVA
-    currentOrder.total = currentOrder.subtotal + currentOrder.tax;
+    currentOrder.tax = 0; // Sin IVA
+    currentOrder.total = currentOrder.subtotal; // Total igual al subtotal
 
-    document.getElementById('subtotal').textContent = `$${currentOrder.subtotal.toFixed(2)}`;
-    document.getElementById('tax').textContent = `$${currentOrder.tax.toFixed(2)}`;
-    document.getElementById('total').textContent = `$${currentOrder.total.toFixed(2)}`;
+    document.getElementById('subtotal').textContent = formatPrice(currentOrder.subtotal);
+    document.getElementById('tax').textContent = formatPrice(currentOrder.tax);
+    document.getElementById('total').textContent = formatPrice(currentOrder.total);
 }
 
 function clearOrder() {
@@ -549,11 +1023,76 @@ function clearOrder() {
         total: 0,
         location: null,
         locationType: null,
-        locationDisplay: null
+        locationDisplay: null,
+        isKitchenTicketPrinted: false,
+        isPaid: false,
+        orderId: null
     };
     updateOrderDisplay();
     updateLocationDisplay();
     loadLocationOptions(currentLocationType);
+    
+    // Show location selector again when clearing order
+    showLocationSelector();
+    
+    // Enable clear button
+    const clearBtn = document.getElementById('clear-order-btn');
+    if (clearBtn) {
+        clearBtn.disabled = false;
+        clearBtn.style.opacity = '1';
+    }
+}
+
+async function payOrder() {
+    if (currentOrder.items.length === 0) {
+        alert('No hay productos en la orden para pagar.');
+        return;
+    }
+
+    if (!currentOrder.location) {
+        alert('Selecciona una ubicación antes de pagar la orden.');
+        return;
+    }
+
+    // Mark order as paid
+    currentOrder.isPaid = true;
+    
+    // Save the paid order
+    const order = {
+        ...currentOrder,
+        status: 'completed',
+        createdAt: moment().format('YYYY-MM-DD HH:mm:ss'),
+        paidAt: moment().format('YYYY-MM-DD HH:mm:ss')
+    };
+
+    try {
+        const savedOrder = await ipcRenderer.invoke('save-order', order);
+        
+        // Mark location as free
+        markLocationAsFree(currentOrder.location);
+        
+        // Update stock
+        currentOrder.items.forEach(item => {
+            const product = products.find(p => p.id === item.productId);
+            if (product) {
+                product.stock -= item.quantity;
+                ipcRenderer.invoke('save-product', product);
+            }
+        });
+
+        // Reload data
+        await loadData();
+        clearOrder();
+        updateDashboard();
+        
+        alert(`Orden pagada exitosamente para ${currentOrder.locationDisplay}!`);
+        
+        // Return to main menu
+        showMainMenu();
+    } catch (error) {
+        console.error('Error paying order:', error);
+        alert('Error al pagar la orden.');
+    }
 }
 
 async function completeOrder() {
@@ -593,7 +1132,7 @@ async function completeOrder() {
         clearOrder();
         updateDashboard();
         
-        alert(`Orden completada exitosamente para ${currentOrder.locationDisplay}!`);
+        alert(`Orden guardada exitosamente para ${currentOrder.locationDisplay}! Ahora puedes imprimir el ticket de cocina.`);
     } catch (error) {
         console.error('Error completing order:', error);
         alert('Error al completar la orden.');
@@ -602,32 +1141,140 @@ async function completeOrder() {
 
 function printReceipt() {
     if (currentOrder.items.length === 0) {
-        alert('No hay items en la orden para imprimir.');
+        alert('No hay productos en la orden para imprimir.');
         return;
     }
 
-    const receipt = `
-        ================================
-        RESTAURANTE - RECIBO
-        ================================
-        Fecha: ${moment().format('DD/MM/YYYY HH:mm')}
-        ${currentOrder.locationDisplay ? `Ubicación: ${currentOrder.locationDisplay}` : ''}
-        ================================
-        ${currentOrder.items.map(item => 
-            `${item.name} x${item.quantity} $${item.subtotal.toFixed(2)}`
-        ).join('\n')}
-        ================================
-        Subtotal: $${currentOrder.subtotal.toFixed(2)}
-        IVA (16%): $${currentOrder.tax.toFixed(2)}
-        TOTAL: $${currentOrder.total.toFixed(2)}
-        ================================
-        ¡Gracias por su visita!
+    const receiptContent = `
+        <div style="font-family: 'Courier New', monospace; width: 300px; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #2c3e50;">Rocoto Burguer</h2>
+                <p style="margin: 5px 0; color: #7f8c8d;">Restaurante</p>
+            </div>
+            
+            <div style="border-bottom: 1px solid #bdc3c7; padding-bottom: 10px; margin-bottom: 15px;">
+                <p style="margin: 5px 0;"><strong>Fecha:</strong> ${moment().format('DD/MM/YYYY')}</p>
+                <p style="margin: 5px 0;"><strong>Hora:</strong> ${moment().format('HH:mm:ss')}</p>
+                <p style="margin: 5px 0;"><strong>Ubicación:</strong> ${currentOrder.locationDisplay || 'No especificada'}</p>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Productos:</h3>
+                ${currentOrder.items.map(item => `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>${item.quantity}x ${item.name}</span>
+                        <span>${formatPrice(item.subtotal)}</span>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div style="border-top: 1px solid #bdc3c7; padding-top: 10px;">
+                <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+                    <span><strong>TOTAL:</strong></span>
+                    <span>${formatPrice(currentOrder.total)}</span>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px; color: #7f8c8d;">
+                <p style="margin: 5px 0;">¡Gracias por su visita!</p>
+                <p style="margin: 5px 0;">Vuelva pronto</p>
+            </div>
+        </div>
     `;
 
     const printWindow = window.open('', '_blank');
-    printWindow.document.write(`<pre>${receipt}</pre>`);
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Recibo - Rocoto Burguer</title>
+                <style>
+                    body { margin: 0; padding: 0; }
+                    @media print {
+                        body { margin: 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                ${receiptContent}
+            </body>
+        </html>
+    `);
     printWindow.document.close();
+    printWindow.focus();
     printWindow.print();
+    printWindow.close();
+}
+
+function printKitchenTicket() {
+    if (currentOrder.items.length === 0) {
+        alert('No hay productos en la orden para imprimir.');
+        return;
+    }
+
+    const kitchenContent = `
+        <div style="font-family: 'Courier New', monospace; width: 300px; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #e74c3c; padding-bottom: 10px;">
+                <h2 style="margin: 0; color: #e74c3c; font-size: 24px;">COCINA</h2>
+                <h3 style="margin: 5px 0; color: #2c3e50;">Rocoto Burguer</h3>
+            </div>
+            
+            <div style="margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                <p style="margin: 5px 0; font-size: 16px;"><strong>MESA/UBICACIÓN:</strong> ${currentOrder.locationDisplay || 'No especificada'}</p>
+                <p style="margin: 5px 0;"><strong>Fecha:</strong> ${moment().format('DD/MM/YYYY')}</p>
+                <p style="margin: 5px 0;"><strong>Hora:</strong> ${moment().format('HH:mm:ss')}</p>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <h3 style="margin: 0 0 10px 0; color: #2c3e50; border-bottom: 1px solid #bdc3c7; padding-bottom: 5px;">PEDIDO:</h3>
+                ${currentOrder.items.map(item => `
+                    <div style="margin-bottom: 8px; padding: 5px; background: white; border-left: 3px solid #3498db;">
+                        <div style="font-size: 16px; font-weight: bold; color: #2c3e50;">
+                            ${item.quantity}x ${item.name}
+                        </div>
+                        ${item.description ? `<div style="font-size: 12px; color: #7f8c8d; margin-top: 3px;">${item.description}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px; border-top: 2px solid #e74c3c; padding-top: 10px;">
+                <p style="margin: 5px 0; font-weight: bold; color: #e74c3c;">¡PREPARAR CON URGENCIA!</p>
+                <p style="margin: 5px 0; color: #7f8c8d;">Orden #${Date.now().toString().slice(-6)}</p>
+            </div>
+        </div>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Ticket Cocina - Rocoto Burguer</title>
+                <style>
+                    body { margin: 0; padding: 0; }
+                    @media print {
+                        body { margin: 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                ${kitchenContent}
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+    
+    // Mark kitchen ticket as printed and disable clear button
+    currentOrder.isKitchenTicketPrinted = true;
+    const clearBtn = document.getElementById('clear-order-btn');
+    if (clearBtn) {
+        clearBtn.disabled = true;
+        clearBtn.style.opacity = '0.5';
+        clearBtn.title = 'No se puede limpiar la orden después de imprimir ticket de cocina';
+    }
+    
+    alert('Ticket de cocina impreso. Ya no se pueden eliminar productos de esta orden.');
 }
 
 // Inventory functions
@@ -833,6 +1480,15 @@ function loadOrdersGrid() {
 
 function getOrderActionButtons(order) {
     const buttons = [];
+    
+    // Add load order button for pending orders
+    if (order.status === 'pending') {
+        buttons.push(`
+            <button class="btn btn-primary" onclick="loadExistingOrder('${order.id}')" title="Cargar orden para agregar productos">
+                <i class="fas fa-edit"></i> Editar
+            </button>
+        `);
+    }
     
     if (order.status === 'pending') {
         buttons.push(`

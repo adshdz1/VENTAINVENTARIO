@@ -1,0 +1,260 @@
+{
+  "categories": [
+    {
+      "id": "1",
+      "name": "Hamburguesas",
+      "color": "#FF6B6B",
+      "icon": "fas fa-hamburger"
+    },
+    {
+      "id": "2",
+      "name": "Sandwiches",
+      "color": "#4ECDC4",
+      "icon": "fas fa-bread-slice"
+    },
+    {
+      "id": "3",
+      "name": "Hot Dogs",
+      "color": "#45B7D1",
+      "icon": "fas fa-hotdog"
+    },
+    {
+      "id": "4",
+      "name": "Ensaladas",
+      "color": "#96CEB4",
+      "icon": "fas fa-leaf"
+    },
+    {
+      "id": "5",
+      "name": "Carnes",
+      "color": "#FFA500",
+      "icon": "fas fa-drumstick-bite"
+    },
+    {
+      "id": "6",
+      "name": "Bebidas",
+      "color": "#3498DB",
+      "icon": "fas fa-wine-bottle"
+    },
+    {
+      "id": "7",
+      "name": "Adicionales",
+      "color": "#9B59B6",
+      "icon": "fas fa-plus-circle"
+    },
+    {
+      "id": "8",
+      "name": "Mazorcadas",
+      "color": "#E67E22",
+      "icon": "fas fa-seedling"
+    },
+    {
+      "id": "9",
+      "name": "Toppings",
+      "color": "#E74C3C",
+      "icon": "fas fa-star"
+    }
+  ],
+  "products": {
+    "hamburguesas": [
+      {
+        "id": "hamb_1",
+        "name": "Hamburguesa Paisa",
+        "price": 17400,
+        "cost": 12000,
+        "stock": 50,
+        "description": "Hamburguesa con carne, chorizo, huevo, queso, lechuga, tomate y salsa criolla",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "hamburguesa-paisa.jpg"
+      },
+      {
+        "id": "hamb_2",
+        "name": "Costeña",
+        "price": 15400,
+        "cost": 11000,
+        "stock": 45,
+        "description": "Hamburguesa con carne, queso costeño, lechuga, tomate y salsa de la casa",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "costena.jpg"
+      },
+      {
+        "id": "hamb_3",
+        "name": "Onion Caramel",
+        "price": 15400,
+        "cost": 10500,
+        "stock": 40,
+        "description": "Hamburguesa con carne, cebolla caramelizada, queso y salsa especial",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "onion-caramel.jpg"
+      },
+      {
+        "id": "hamb_4",
+        "name": "Sencilla de Pollo",
+        "price": 8900,
+        "cost": 6000,
+        "stock": 60,
+        "description": "Hamburguesa de pollo con lechuga, tomate y mayonesa",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "pollo-sencilla.jpg"
+      },
+      {
+        "id": "hamb_5",
+        "name": "Sencilla de Res",
+        "price": 8900,
+        "cost": 6500,
+        "stock": 55,
+        "description": "Hamburguesa de res con lechuga, tomate y mayonesa",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "res-sencilla.jpg"
+      },
+      {
+        "id": "hamb_6",
+        "name": "Mexicana",
+        "price": 12400,
+        "cost": 8500,
+        "stock": 35,
+        "description": "Hamburguesa con carne, jalapeños, queso, guacamole y salsa picante",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "mexicana.jpg"
+      },
+      {
+        "id": "hamb_7",
+        "name": "Hawaiana",
+        "price": 12400,
+        "cost": 8000,
+        "stock": 30,
+        "description": "Hamburguesa con carne, piña, queso, lechuga y salsa hawaiana",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "hawaiana.jpg"
+      },
+      {
+        "id": "hamb_8",
+        "name": "Australiana",
+        "price": 12400,
+        "cost": 9000,
+        "stock": 25,
+        "description": "Hamburguesa con carne, huevo, bacon, queso y salsa especial",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "australiana.jpg"
+      },
+      {
+        "id": "hamb_9",
+        "name": "Todo Terreno",
+        "price": 14900,
+        "cost": 10000,
+        "stock": 20,
+        "description": "Hamburguesa con doble carne, queso, bacon, lechuga, tomate y salsa",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "todo-terreno.jpg"
+      },
+      {
+        "id": "hamb_10",
+        "name": "Pollo Champiñón",
+        "price": 13900,
+        "cost": 9500,
+        "stock": 30,
+        "description": "Hamburguesa de pollo con champiñones, queso y salsa de la casa",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "pollo-champinon.jpg"
+      },
+      {
+        "id": "hamb_11",
+        "name": "Super BBQ y Tocineta",
+        "price": 14900,
+        "cost": 10500,
+        "stock": 25,
+        "description": "Hamburguesa con carne, tocineta, queso y salsa BBQ",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "super-bbq.jpg"
+      },
+      {
+        "id": "hamb_12",
+        "name": "Super Cheese Tocineta",
+        "price": 15900,
+        "cost": 11000,
+        "stock": 20,
+        "description": "Hamburguesa con carne, tocineta, triple queso y salsa especial",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "super-cheese.jpg"
+      },
+      {
+        "id": "hamb_13",
+        "name": "Americana",
+        "price": 14900,
+        "cost": 10000,
+        "stock": 35,
+        "description": "Hamburguesa con carne, queso americano, lechuga, tomate y salsa",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "americana.jpg"
+      },
+      {
+        "id": "hamb_14",
+        "name": "Suprema",
+        "price": 24400,
+        "cost": 15000,
+        "stock": 15,
+        "description": "Hamburguesa con triple carne, queso, bacon, lechuga, tomate y todas las salsas",
+        "categoryId": "1",
+        "isAvailable": true,
+        "image": "suprema.jpg"
+      }
+    ],
+    "adicionales": [
+      {
+        "id": "add_1",
+        "name": "Doble",
+        "price": 6000,
+        "cost": 4000,
+        "stock": 100,
+        "description": "Agregar carne adicional a cualquier hamburguesa",
+        "categoryId": "7",
+        "isAvailable": true,
+        "image": "doble.jpg",
+        "isModifier": true,
+        "modifierType": "hamburger_meat"
+      }
+    ]
+  },
+  "settings": {
+    "restaurant_name": "Restaurant Manager",
+    "tax_rate": 0.16,
+    "currency": "COP",
+    "default_language": "es",
+    "receipt_message": "¡Gracias por su visita! Vuelva pronto.",
+    "contact_info": {
+      "phone": "",
+      "address": "",
+      "email": ""
+    }
+  },
+  "orders": [],
+  "users": [
+    {
+      "username": "admin",
+      "password": "admin123",
+      "role": "admin",
+      "displayName": "Administrador",
+      "isActive": true
+    },
+    {
+      "username": "cajero",
+      "password": "cajero123",
+      "role": "cajero",
+      "displayName": "Cajero",
+      "isActive": true
+    }
+  ]
+} 
